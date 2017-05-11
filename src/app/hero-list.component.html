@@ -2,6 +2,7 @@
 <h3 *ngIf="!isLoading">Select a hero:</h3>
 
 <nav>
+  <button (click)="addEmptyHero()" class="btn btn-primary">Add User</button>
   <button (click)="getHeroes()" class="btn btn-primary">Refresh</button>
   <a *ngFor="let hero of heroes | async" (click)="select(hero)">{{hero.name}}</a>
 </nav>
@@ -10,5 +11,5 @@
   <hr>
   <h2>Hero Detail</h2>
   <h3>Editing: {{selectedHero.name}}</h3>
-  <hero-detail [hero]="selectedHero"></hero-detail>
+  <hero-detail [hero]="selectedHero" (heroDetailEventEmitter)="heroDetailEventEmitter($event)"></hero-detail>
 </div>

@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges }       from '@angular/core';
+import { Component, Input, Output, OnChanges, EventEmitter }       from '@angular/core';
 import { FormArray, FormBuilder, FormGroup } from '@angular/forms';
 
 import { Address, Hero, states } from './data-model';
@@ -10,6 +10,7 @@ import { HeroService }           from './hero.service';
 })
 export class HeroDetailComponent implements OnChanges {
   @Input() hero: Hero;
+  @Output() heroDetailEventEmitter = new EventEmitter();
 
   heroForm: FormGroup;
   nameChangeLog: string[] = [];
@@ -34,7 +35,9 @@ export class HeroDetailComponent implements OnChanges {
 
   ngOnChanges() {
     this.heroForm.reset({
-      name: this.hero.name
+      name: this.hero.name,
+      power: this.hero.power,
+      sidekick: this.hero.sidekick
     });
     this.setAddresses(this.hero.addresses);
   }
@@ -55,8 +58,19 @@ export class HeroDetailComponent implements OnChanges {
 
   onSubmit() {
     this.hero = this.prepareSaveHero();
-    this.heroService.updateHero(this.hero).subscribe(/* error handling */);
-    this.ngOnChanges();
+    this.heroService.isHero(this.hero)
+      .subscribe((isHero: Boolean) => {
+        if (isHero) {
+          this.heroService.updateHero(this.hero).subscribe(/* error handling */);
+        } else {
+          this.heroService.addHero(this.hero).subscribe();
+          this.heroDetailEventEmitter.emit({
+            code: 'newHero',
+            hero: this.hero
+          });
+        }
+        this.ngOnChanges();
+      });
   }
 
   prepareSaveHero(): Hero {
@@ -73,12 +87,33 @@ export class HeroDetailComponent implements OnChanges {
       id: this.hero.id,
       name: formModel.name as string,
       // addresses: formModel.secretLairs // <-- bad!
-      addresses: secretLairsDeepCopy
+      addresses: secretLairsDeepCopy,
+      power : formModel.power as string,
+      sidekick : formModel.sidekick as boolean
     };
     return saveHero;
   }
 
   revert() { this.ngOnChanges(); }
+
+  delete() {
+    this.hero = this.prepareSaveHero();
+    this.heroService.deleteHero(this.hero)
+      .subscribe((heroes: Hero[]) => {
+        this.ngOnChanges();
+        let param: any = {
+          code: 'delHero',
+          hero: undefined
+        };
+        if ( heroes.length > 0 ) {
+          const heroIdx = heroes.length - 1;
+          param.hero = heroes[heroIdx];
+          this.heroDetailEventEmitter.emit(param);
+        }else {
+          this.heroDetailEventEmitter.emit(param);
+        }
+      });
+  }
 
   logNameChange() {
     const nameControl = this.heroForm.get('name');
